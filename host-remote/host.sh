@@ -10,6 +10,12 @@ echo "Configuring host Ethernet: $ETH"
 # Remove existing IP configuration from the Ethernet interface
 sudo ip addr flush dev "$ETH"
 
+echo "Flushed existing IP configuration from $ETH"
+
+echo "waiting for 10 seconds..."
+sleep 10
+
+echo "Assigning new IP configuration to $ETH"
 # Assign fixed IP
 sudo ip addr add "$HOST_IP" dev "$ETH"
 
