@@ -1,0 +1,6 @@
+[DEFAULT]
+user=ocid1.user.oc1..REPLACE_ME
+fingerprint=REPLACE_ME
+tenancy=ocid1.tenancy.oc1..REPLACE_ME
+region=ap-mumbai-1
+key_file=~/.oci/oci_api_key.pem

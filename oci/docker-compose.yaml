@@ -1,0 +1,83 @@
+services:
+
+  mysql-db:
+    image: mysql:8.0
+    container_name: expense-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: expense-tracker
+      MYSQL_USER: appuser
+      MYSQL_PASSWORD: apppassword
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - app-network
+    mem_limit: 600m
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7
+    container_name: expense-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - app-network
+    mem_limit: 100m
+    command: ["redis-server", "--maxmemory", "100mb", "--maxmemory-policy", "allkeys-lru"]
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: expense-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - app-network
+    mem_limit: 300m
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin123
+
+  expense-tracker-backend:
+    image: dhruv4023/expense-tracker-server:latest
+    container_name: expense-tracker-server
+    ports:
+      - "8000:8000"
+    depends_on:
+      - mysql-db
+      - redis
+      - rabbitmq
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+
+      # MySQL
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-db:3306/expense-tracker?createDatabaseIfNotExist=true
+      - SPRING_DATASOURCE_USERNAME=appuser
+      - SPRING_DATASOURCE_PASSWORD=apppassword
+      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=com.mysql.cj.jdbc.Driver
+
+      # Redis (NOW INTERNAL)
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+
+      # RabbitMQ (NOW INTERNAL)
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_RABBITMQ_PORT=5672
+      - SPRING_RABBITMQ_USERNAME=admin
+      - SPRING_RABBITMQ_PASSWORD=admin123
+
+    networks:
+      - app-network
+    mem_limit: 700m
+
+volumes:
+  mysql_data:
+
+networks:
+  app-network:
