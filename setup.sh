@@ -85,6 +85,22 @@ install_java17() {
     INSTALLED["java17"]=1
 }
 
+install_maven() {
+    if ! command -v mvn &> /dev/null
+    then
+        echo -e "${BLUE}📦 Installing Maven...${NC}"
+        sudo apt update
+        sudo apt install maven -y
+        echo -e "${GREEN}✅ Maven installed${NC}"
+    else
+        echo -e "${GREEN}✅ Maven already installed${NC}"
+    fi
+    
+    echo -e "${BLUE}🔍 Maven version:${NC}"
+    mvn -version
+    INSTALLED["maven"]=1
+}
+
 install_mysql() {
     if ! command -v mysql &> /dev/null
     then
@@ -165,7 +181,8 @@ show_menu() {
     echo -e "${BLUE}║${NC} 6) PostgreSQL"
     echo -e "${BLUE}║${NC} 7) OCI CLI"
     echo -e "${BLUE}║${NC} 8) Docker"
-    echo -e "${BLUE}║${NC} 9) All"
+    echo -e "${BLUE}║${NC} 9) Maven"
+    echo -e "${BLUE}║${NC} 10) All"
     echo -e "${BLUE}║${NC} 0) Exit"
     echo -e "${BLUE}╚════════════════════════════════════════╝${NC}"
     echo ""
@@ -179,7 +196,7 @@ select_installers() {
 
     while true; do
         show_menu
-        echo -n -e "${YELLOW}Enter your choice (e.g., 1 2 3 or 9 for all): ${NC}"
+        echo -n -e "${YELLOW}Enter your choice (e.g., 1 2 3 or 10 for all): ${NC}"
         read -r selected_options
 
         # Check if user wants to exit
@@ -189,15 +206,15 @@ select_installers() {
         fi
 
         # Process input
-        if [[ "$selected_options" == "9" ]]; then
-            all_choices=(1 2 3 4 5 6 7 8)
+        if [[ "$selected_options" == "10" ]]; then
+            all_choices=(1 2 3 4 5 6 7 8 9)
             break
         else
             # Split input by spaces and validate
             all_choices=($selected_options)
             local valid=true
             for choice in "${all_choices[@]}"; do
-                if ! [[ "$choice" =~ ^[1-8]$ ]]; then
+                if ! [[ "$choice" =~ ^[1-9]$ ]]; then
                     echo -e "${YELLOW}⚠️  Invalid choice: $choice${NC}"
                     valid=false
                     break
@@ -207,7 +224,7 @@ select_installers() {
             if $valid && [ ${#all_choices[@]} -gt 0 ]; then
                 break
             else
-                echo -e "${YELLOW}⚠️  Invalid input. Please enter numbers 1-8 separated by spaces or 9 for all.${NC}"
+                echo -e "${YELLOW}⚠️  Invalid input. Please enter numbers 1-9 separated by spaces or 10 for all.${NC}"
                 sleep 1
             fi
         fi
@@ -228,6 +245,7 @@ select_installers() {
             6) install_postgres ;;
             7) install_oci_cli ;;
             8) install_docker ;;
+            9) install_maven ;;
         esac
         echo ""
     done
