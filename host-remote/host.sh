@@ -17,7 +17,7 @@ sleep 10
 
 echo "Assigning new IP configuration to $ETH"
 # Assign fixed IP
-sudo ip addr add "$HOST_IP" dev "$ETH"
+sudo ip addr add "$HOST_IP" dev "$ETH" 2>/dev/null || true
 
 # Bring interface up
 sudo ip link set "$ETH" up
