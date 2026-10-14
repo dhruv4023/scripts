@@ -3,31 +3,39 @@
 set -e
 
 IFACE="eno2"
-SERVER_IP="192.168.102.1"
-RANGE_START="192.168.102.100"
-RANGE_END="192.168.102.200"
+SERVER_IP="192.168.0.1"
+RANGE_START="192.168.0.2"
+RANGE_END="192.168.0.200"
+
+# Authenticate once before starting background processes.
+sudo -v
+
+DNSMASQ_PID=""
+TCPDUMP_PID=""
 
 cleanup() {
     echo
     echo "Stopping DHCP debug..."
-    if [[ -n "${DNSMASQ_PID:-}" ]]; then
+
+    trap - INT TERM EXIT
+
+    if [[ -n "$TCPDUMP_PID" ]]; then
+        sudo kill "$TCPDUMP_PID" 2>/dev/null || true
+    fi
+
+    if [[ -n "$DNSMASQ_PID" ]]; then
         sudo kill "$DNSMASQ_PID" 2>/dev/null || true
     fi
+
+    wait 2>/dev/null || true
+    echo "DHCP debug stopped."
 }
-trap cleanup EXIT INT TERM
+
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 clear
-
-echo "╔══════════════════════════════════════════════════════════════╗"
-echo "║                    DHCP DEBUG SERVER                       ║"
-echo "╠══════════════════════════════════════════════════════════════╣"
-printf "║  Interface : %-44s ║\n" "$IFACE"
-printf "║  Server IP : %-44s ║\n" "$SERVER_IP"
-printf "║  DHCP Pool : %-44s ║\n" "$RANGE_START - $RANGE_END"
-echo "╠══════════════════════════════════════════════════════════════╣"
-echo "║  DHCPMASQ → left       TCPDUMP → right                    ║"
-echo "╚══════════════════════════════════════════════════════════════╝"
-echo
 
 echo "Starting dnsmasq..."
 
@@ -50,7 +58,6 @@ sleep 1
 
 echo
 echo "Starting packet capture..."
-echo
 
 sudo tcpdump -vvv -l -ni "$IFACE" \
     'udp port 67 or udp port 68' \
