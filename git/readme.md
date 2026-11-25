@@ -1,54 +1,130 @@
-# Git branch tracker configuration
+# Git Branch Tracker
 
-`edit-git-config.sh` interactively narrows the branches fetched and tracked for every Git remote in the current repository. It is useful when a remote has many release, SaaS, and developer branches, but you only need a selected subset locally.
+A small interactive script to manage which remote branches Git tracks. This is especially useful for large repositories like Odoo, where thousands of remote branches exist but only a small subset is relevant to daily development.
+
+The script reduces unnecessary fetching and keeps the local remote-tracking branch list manageable.
+
+## Features
+
+- Automatically detects the latest 3 numeric release branches (e.g. `18.0`, `19.0`, `20.0`).
+- Detects related SaaS branches.
+- Lets you interactively select release and SaaS branches.
+- Supports developer-specific branch suffixes (e.g. `-djip`, `-fw`).
+- Keeps `master` by default.
+- Updates the remote's fetch configuration based on your selection.
+- Removes unselected remote-tracking references locally.
+- Enables pruning and disables automatic tag fetching.
 
 ## Requirements
 
-- Bash 4 or newer
+- Bash 4+
 - Git
 - An interactive terminal
-- At least one configured remote
+- At least one configured Git remote
 
-## Run
+## Usage
 
-From inside the repository whose remotes you want to configure:
-
-```bash
-/path/to/scripts/git/edit-git-config.sh
-```
-
-The script reads remote branches with `git ls-remote --heads`, then offers the three latest numeric `N.0` releases and their matching `saas-N.X` branches. Already configured branches are preselected.
-
-Use the arrow keys to move through the release list, **Space** to toggle a branch, **a** to select all, **n** to select none, and **Enter** to continue. In the suffix editor, type a developer suffix and press **Enter** to add it; **Space** continues. Use **Up/Down** and **Delete** to remove an entry, or **Backspace** to remove the last entry. **Esc** cancels.
-
-Developer suffixes are used to recognize feature branches under selected release bases. The script initializes the list in this order:
-
-1. `DEFAULT_DEVELOPERS`, if set in the environment.
-2. Suffixes inferred from existing remote fetch refspecs.
-3. The built-in fallback suffixes `-djip -fw`.
-
-For example, to start with a custom list:
+Run the script using its absolute path **from inside the repository's working tree**:
 
 ```bash
-DEFAULT_DEVELOPERS="-alice -team" /path/to/scripts/git/edit-git-config.sh
+bash /home/odoo/download/edit-git-config.sh
 ```
 
-Suffix matching is case-sensitive and expects the suffix at the end of the branch name (for example, `19.0-fix-alice`).
+You do not need to close your repository, enter its `.git` directory, or copy the script into the repository.
 
-## Review and apply
+The script operates on the repository from which it is invoked.
 
-Before making changes, the script displays a per-remote preview of the fetch patterns, branches to keep, and local remote-tracking refs to remove. Review this plan and confirm at the prompt to apply it. Declining or pressing **q**/**Esc** in a selector exits without applying the plan.
+### Interactive controls
 
-When applied, the script:
+| Key | Action |
+|---|---|
+| Up / Down | Navigate |
+| Space | Toggle selection |
+| `a` | Select all |
+| `n` | Select none |
+| Enter | Continue |
+| `q` | Cancel |
 
-- Rewrites each remote's `remote.<name>.fetch` refspecs to cover `master`, selected release/SaaS bases, and matching developer branches.
-- Enables pruning for deleted server branches and disables tag fetching for those remotes.
-- Fetches the selected branches, then deletes unselected **local remote-tracking refs**.
+### Developer suffixes
 
-Local branches and branches on the server are not deleted. The script does not run `git gc`. Changes to fetch configuration are stored in the current repository's Git config.
+You can configure which developer-specific branches to track.
 
-Afterward, review local branch tracking with:
+- Type a suffix and press Enter to add it.
+- Use Up / Down and Delete to remove a selected suffix.
+- Backspace removes the last suffix.
+- Space continues.
+- Esc cancels.
+
+By default, the script uses `-djip` and `-fw`, unless it can infer existing suffixes from the current fetch configuration.
+
+You can override the defaults:
 
 ```bash
-git branch -vv
+DEFAULT_DEVELOPERS="-alice -team" bash /home/odoo/download/edit-git-config.sh
 ```
+
+## Exceptional branches
+
+Sometimes you need a branch that does not match the selected release or developer suffix patterns.
+
+You can fetch and check out such a branch without permanently adding it to the remote's fetch configuration:
+
+```bash
+BRANCH=master-imp-test-roboodo
+REMOTE=odoo-dev
+
+git fetch "$REMOTE" "+refs/heads/$BRANCH:refs/remotes/$REMOTE/$BRANCH" &&
+git switch --track -c "$BRANCH" "$REMOTE/$BRANCH"
+```
+
+This creates a local branch and sets its upstream.
+
+**Why not add a permanent fetch refspec?**
+
+An exact refspec for an exceptional branch can cause future fetch operations to fail if that branch is deleted from the remote.
+
+By fetching it explicitly without changing the remote's fetch configuration:
+
+- You can check out the exceptional branch.
+- Normal `git fetch` and `git remote update` remain unaffected.
+- The local branch is not deleted.
+- To update the exceptional branch later, fetch it explicitly again.
+
+Note: Because the exceptional branch is not part of the regular fetch configuration, its remote-tracking reference will not be automatically updated or pruned by normal fetch operations.
+
+## What changes does the script make?
+
+The script modifies only the current repository's local Git configuration and remote-tracking references.
+
+It:
+- Updates `remote.<name>.fetch`.
+- Enables `remote.<name>.prune`.
+- Sets `remote.<name>.tagOpt` to `--no-tags`.
+- Fetches the selected branches.
+- Deletes unselected references under `refs/remotes/`.
+
+It does **not**:
+- Delete actual local branches under `refs/heads/`.
+- Delete branches from the remote server.
+- Push any changes to the remote.
+- Run `git gc`.
+
+Review the preview carefully before confirming. Manually created remote-tracking references that are not included in the selection may also be removed.
+
+## Pros
+
+- Reduces unnecessary downloads, especially in large repositories.
+- Makes regular fetches faster.
+- Keeps the remote-tracking branch list clean.
+- Gives you control over which release and developer branches are tracked.
+
+## Cons
+
+- Branches outside the selected patterns must be fetched explicitly when needed.
+- New Odoo releases require rerunning the script to include them.
+- Exceptional branches need to be fetched explicitly again when you want to update them.
+
+## Links
+
+- [Tracking script](https://github.com/dhruv4023/scripts/blob/dev/git/edit-git-config.sh)
+- [Script README](https://github.com/dhruv4023/scripts/blob/dev/git/readme.md)

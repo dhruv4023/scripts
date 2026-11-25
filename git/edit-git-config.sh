@@ -41,7 +41,7 @@ die()   { printf '%b✘ Error:%b %s\n' "$RED" "$RESET" "$*" >&2; exit 1; }
 
 banner() {
     printf '%b╔══════════════════════════════════════════════════════╗%b\n' "$CYAN$BOLD" "$RESET"
-    printf '%b║                  BRANCH TRACKER CONFIGER             ║%b\n' "$CYAN$BOLD" "$RESET"
+    printf '%b║              BRANCH TRACKER CONFIGURATOR             ║%b\n' "$CYAN$BOLD" "$RESET"
     printf '%b╚══════════════════════════════════════════════════════╝%b\n' "$CYAN$BOLD" "$RESET"
 }
 
